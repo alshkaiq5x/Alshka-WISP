@@ -1,0 +1,35 @@
+#!/bin/sh
+# Alshka-WISP First Boot Initialization
+# Runs automatically on first boot and after factory reset
+
+# 1. ضبط اسم الراوتر والهوية
+uci set system.@system[0].hostname='Alshka-WISP'
+uci commit system
+
+# 2. تفعيل تسريع العتاد Hardware Packet Offloading لأقصى سرعة إيثرنت وواي فاي
+uci set firewall.@defaults[0].flow_offloading='1'
+uci set firewall.@defaults[0].flow_offloading_hw='1'
+
+# 3. إعدادات جدار الحماية لسيرفر PPPoE
+uci -q delete firewall.alshka_zone
+uci set firewall.alshka_zone=zone
+uci set firewall.alshka_zone.name='alshka_zone'
+uci set firewall.alshka_zone.input='ACCEPT'
+uci set firewall.alshka_zone.output='ACCEPT'
+uci set firewall.alshka_zone.forward='ACCEPT'
+uci set firewall.alshka_zone.masq='1'
+uci set firewall.alshka_zone.mtu_fix='1'
+uci -q delete firewall.alshka_zone.device
+uci add_list firewall.alshka_zone.device='ppp+'
+
+uci -q delete firewall.alshka_forward
+uci set firewall.alshka_forward=forwarding
+uci set firewall.alshka_forward.src='alshka_zone'
+uci set firewall.alshka_forward.dest='wan'
+uci commit firewall
+
+# 4. تفعيل خدمات Alshka-WISP
+/etc/init.d/alshka-server enable 2>/dev/null || true
+/etc/init.d/alshka-watchdog enable 2>/dev/null || true
+
+exit 0
